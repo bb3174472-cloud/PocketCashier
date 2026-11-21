@@ -12,4 +12,8 @@ interface ProductDao {
 
     @Query("SELECT * FROM products ORDER BY id DESC")
     fun getAllProducts(): Flow<List<Product>>
+
+    // دالة جديدة لخصم الكمية بعد البيع
+    @Query("UPDATE products SET quantity = quantity - :soldQuantity WHERE id = :productId")
+    suspend fun updateQuantity(productId: Int, soldQuantity: Int)
 }
