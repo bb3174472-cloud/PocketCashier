@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -23,11 +24,11 @@ import com.pocketcashier.screens.*
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val dao = AppDatabase.getDatabase(this).productDao()
+        val db = AppDatabase.getDatabase(this)
         
         setContent {
             MaterialTheme {
-                MainAppScreen(dao)
+                MainAppScreen(db.productDao(), db.customerDao())
             }
         }
     }
@@ -35,12 +36,13 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(dao: com.pocketcashier.data.ProductDao) {
+fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: com.pocketcashier.data.CustomerDao) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem("الرئيسية", Icons.Default.Home, "dashboard"),
         BottomNavItem("البيع", Icons.Default.ShoppingCart, "cashier"),
         BottomNavItem("المنتجات", Icons.Default.Menu, "products"),
+        BottomNavItem("العملاء", Icons.Default.Person, "customers"), // التبويب الجديد
         BottomNavItem("الإعدادات", Icons.Default.Settings, "settings")
     )
 
@@ -68,9 +70,10 @@ fun MainAppScreen(dao: com.pocketcashier.data.ProductDao) {
         }
     ) { padding ->
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
-            composable("dashboard") { DashboardScreen(dao) }
-            composable("cashier") { CashierScreen(dao) }
-            composable("products") { ProductsScreen(dao) }
+            composable("dashboard") { DashboardScreen(productDao) }
+            composable("cashier") { CashierScreen(productDao) }
+            composable("products") { ProductsScreen(productDao) }
+            composable("customers") { CustomersScreen(customerDao) }
             composable("settings") { SettingsScreen() }
         }
     }
