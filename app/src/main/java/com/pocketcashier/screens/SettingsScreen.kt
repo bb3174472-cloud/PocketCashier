@@ -13,20 +13,20 @@ fun SettingsScreen() {
         topBar = { TopAppBar(title = { Text("الإعدادات") }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            ListItem(
-                headlineContent = { Text("اسم المتجر") },
-                supportingContent = { Text("كاشير الجيب") }
-            )
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("اسم المتجر")
+                Text("كاشير الجيب")
+            }
             Divider()
-            ListItem(
-                headlineContent = { Text("العملة") },
-                supportingContent = { Text("الريال اليمني (YER)") }
-            )
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("العملة")
+                Text("الريال اليمني (YER)")
+            }
             Divider()
-            ListItem(
-                headlineContent = { Text("النسخ الاحتياطي") },
-                supportingContent = { Text("قريباً...") }
-            )
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("النسخ الاحتياطي")
+                Text("قريباً...")
+            }
         }
     }
 }
