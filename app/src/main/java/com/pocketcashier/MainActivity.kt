@@ -35,12 +35,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CashierScreen(dao: ProductDao) {
     val scope = rememberCoroutineScope()
     val products by dao.getAllProducts().collectAsState(initial = emptyList())
     
-    // حالة السلة: خريطة تربط المنتج بالكمية المطلوبة
     val cart = remember { mutableStateMapOf<Product, Int>() }
     var showAddProductDialog by remember { mutableStateOf(false) }
 
@@ -75,11 +75,10 @@ fun CashierScreen(dao: ProductDao) {
                         Button(
                             onClick = {
                                 scope.launch {
-                                    // خصم الكميات من قاعدة البيانات
                                     cart.forEach { (product, qty) ->
                                         dao.updateQuantity(product.id, qty)
                                     }
-                                    cart.clear() // مسح السلة
+                                    cart.clear()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50))
@@ -92,7 +91,7 @@ fun CashierScreen(dao: ProductDao) {
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).padding(horizontal = 16.dp)) {
-            Text("اضغط على المنتج لإضافته للسلة", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("اضغط على المنتج لإضافته للسلة", style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             
             LazyColumn(modifier = Modifier.fillMaxSize()) {
