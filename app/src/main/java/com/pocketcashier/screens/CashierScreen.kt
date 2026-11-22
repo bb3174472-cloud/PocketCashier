@@ -27,7 +27,7 @@ fun CashierScreen(
     productDao: ProductDao, 
     saleDao: SaleDao,
     cart: MutableMap<Product, Int>,
-    onScanClick: () -> Unit // هذا هو المتغير الذي يفتح الكاميرا
+    onScanClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -67,7 +67,6 @@ fun CashierScreen(
                     IconButton(onClick = { showManualEntry = true }) {
                         Icon(Icons.Default.Keyboard, contentDescription = "إدخال يدوي")
                     }
-                    // ⬇️ زر الكاميرا موجود هنا ⬇️
                     IconButton(onClick = onScanClick) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "فتح الكاميرا", tint = MaterialTheme.colorScheme.primary)
                     }
@@ -125,7 +124,6 @@ fun CashierScreen(
                             }
                         }
                         
-                        // أزرار التحكم بالكمية
                         if (qtyInCart > 0) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {

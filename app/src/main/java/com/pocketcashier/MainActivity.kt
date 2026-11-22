@@ -30,6 +30,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     val navController = rememberNavController()
+    
+    // السلة محفوظة هنا لتبقى حتى لو فتحت الكاميرا
     val cashierCart = remember { mutableStateMapOf<Product, Int>() }
 
     val items = listOf(
@@ -70,7 +72,7 @@ fun MainAppScreen(db: AppDatabase) {
                     productDao = db.productDao(), 
                     saleDao = db.saleDao(),
                     cart = cashierCart,
-                    onScanClick = { navController.navigate("scanner") } // هنا يتم فتح الكاميرا
+                    onScanClick = { navController.navigate("scanner") }
                 )
             }
             
