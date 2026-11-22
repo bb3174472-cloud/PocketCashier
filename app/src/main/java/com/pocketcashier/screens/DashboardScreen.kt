@@ -1,6 +1,8 @@
 package com.pocketcashier.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,14 +14,19 @@ import com.pocketcashier.data.ProductDao
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(dao: ProductDao) {
+fun DashboardScreen(dao: ProductDao, onViewSalesClick: () -> Unit) {
     val products by dao.getAllProducts().collectAsState(initial = emptyList())
     val totalProducts = products.size
     val totalStock = products.sumOf { it.quantity }
     val lowStockCount = products.count { it.quantity < 5 }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("لوحة التحكم", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("لوحة التحكم", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            IconButton(onClick = onViewSalesClick) {
+                Icon(Icons.Default.List, contentDescription = "سجل المبيعات", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

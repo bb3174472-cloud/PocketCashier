@@ -11,15 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pocketcashier.data.Product
-import com.pocketcashier.data.ProductDao
+import com.pocketcashier.data.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CashierScreen(dao: ProductDao) {
+fun CashierScreen(productDao: ProductDao, saleDao: SaleDao) {
     val scope = rememberCoroutineScope()
-    val products by dao.getAllProducts().collectAsState(initial = emptyList())
+    val products by productDao.getAllProducts().collectAsState(initial = emptyList())
     val cart = remember { mutableStateMapOf<Product, Int>() }
     val totalAmount = cart.entries.sumOf { it.key.price * it.value }
 
@@ -43,8 +42,25 @@ fun CashierScreen(dao: ProductDao) {
                         Button(
                             onClick = {
                                 scope.launch {
-                                    cart.forEach { (product, qty) -> dao.updateQuantity(product.id, qty) }
-                                    cart.clear()
+                                    // 1. حفظ الفاتورة الأساسية والحصول على رقمها
+                                    val saleId = saleDao.insertSale(Sale(totalAmount = totalAmount))
+                                    
+                                    // 2. حفظ تفاصيل المنتجات في الفاتورة
+                                    val saleItems = cart.map { (product, qty) ->
+                                        SaleItem(
+                                            saleId = saleId.toInt(),
+                                            productName = product.name,
+                                            price = product.price,
+                                            quantity = qty
+                                        )
+                                    }
+                                    saleDao.insertSaleItems(saleItems)
+                                    
+                                    // 3. خصم الكميات من المخزون
+                                    cart.forEach { (product, qty) ->
+                                        productDao.updateQuantity(product.id, qty)
+                                    }
+                                    cart.clear() // مسح السلة
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))

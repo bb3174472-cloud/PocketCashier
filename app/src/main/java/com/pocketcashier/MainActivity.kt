@@ -5,11 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Store
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,7 +24,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             MaterialTheme {
-                MainAppScreen(db.productDao(), db.customerDao(), db.supplierDao())
+                MainAppScreen(db)
             }
         }
     }
@@ -36,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: com.pocketcashier.data.CustomerDao, supplierDao: com.pocketcashier.data.SupplierDao) {
+fun MainAppScreen(db: AppDatabase) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem("الرئيسية", Icons.Default.Home, "dashboard"),
@@ -70,11 +66,16 @@ fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: co
         }
     ) { padding ->
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
-            composable("dashboard") { DashboardScreen(productDao) }
-            composable("cashier") { CashierScreen(productDao) }
-            composable("products") { ProductsScreen(productDao) }
-            composable("customers") { CustomersScreen(customerDao) }
-            composable("suppliers") { SuppliersScreen(supplierDao) }
+            composable("dashboard") { 
+                DashboardScreen(db.productDao(), onViewSalesClick = { navController.navigate("sales_history") }) 
+            }
+            composable("cashier") { CashierScreen(db.productDao(), db.saleDao()) }
+            composable("products") { ProductsScreen(db.productDao()) }
+            composable("customers") { CustomersScreen(db.customerDao()) }
+            composable("suppliers") { SuppliersScreen(db.supplierDao()) }
+            composable("sales_history") { 
+                SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) 
+            }
         }
     }
 }
