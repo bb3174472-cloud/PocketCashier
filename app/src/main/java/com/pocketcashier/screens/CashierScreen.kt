@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 fun CashierScreen(
     productDao: ProductDao, 
     saleDao: SaleDao,
+    cart: MutableMap<Product, Int>,
     scannedBarcode: String = "",
     onBarcodeConsumed: () -> Unit = {},
     onScanClick: () -> Unit = {}
@@ -31,26 +32,19 @@ fun CashierScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val products by productDao.getAllProducts().collectAsState(initial = emptyList())
-    val cart = remember { mutableStateMapOf<Product, Int>() }
     val totalAmount = cart.entries.sumOf { it.key.price * it.value }
     
     var showManualEntry by remember { mutableStateOf(false) }
 
-    // دالة مساعدة للبحث عن المنتج وإضافته
     fun processBarcode(barcode: String) {
         val cleanScanned = barcode.trim()
-        // البحث المطابق تماماً
         var product = products.find { it.barcode?.trim() == cleanScanned }
         
-        // حل مشكلة الباركود 12 رقم (إذا أضافت الكاميرا صفراً في البداية)
         if (product == null && cleanScanned.length == 13 && cleanScanned.startsWith("0")) {
-            val codeWithoutZero = cleanScanned.substring(1)
-            product = products.find { it.barcode?.trim() == codeWithoutZero }
+            product = products.find { it.barcode?.trim() == cleanScanned.substring(1) }
         }
-        // حل عكسي (إذا كان المحفوظ 13 والمقروء 12)
         if (product == null && cleanScanned.length == 12) {
-            val codeWithZero = "0$cleanScanned"
-            product = products.find { it.barcode?.trim() == codeWithZero }
+            product = products.find { it.barcode?.trim() == "0$cleanScanned" }
         }
 
         if (product != null) {
@@ -66,7 +60,6 @@ fun CashierScreen(
         }
     }
 
-    // التقاط الباركود من الكاميرا
     LaunchedEffect(scannedBarcode, products) {
         if (scannedBarcode.isNotBlank() && products.isNotEmpty()) {
             processBarcode(scannedBarcode)
@@ -144,11 +137,7 @@ fun CashierScreen(
             onDismissRequest = { showManualEntry = false },
             title = { Text("إدخال باركود يدوياً") },
             text = {
-                OutlinedTextField(
-                    value = manualCode,
-                    onValueChange = { manualCode = it },
-                    label = { Text("رقم الباركود") }
-                )
+                OutlinedTextField(value = manualCode, onValueChange = { manualCode = it }, label = { Text("رقم الباركود") })
             },
             confirmButton = {
                 TextButton(onClick = {

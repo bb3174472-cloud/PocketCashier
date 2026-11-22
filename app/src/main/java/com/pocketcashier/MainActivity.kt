@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pocketcashier.data.AppDatabase
+import com.pocketcashier.data.Product
 import com.pocketcashier.screens.*
 
 class MainActivity : ComponentActivity() {
@@ -29,6 +30,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     val navController = rememberNavController()
+    
+    // السلة محفوظة هنا لتبقى حتى لو فتحت الكاميرا أو غيرت الشاشة
+    val cashierCart = remember { mutableStateMapOf<Product, Int>() }
+
     val items = listOf(
         BottomNavItem("الرئيسية", Icons.Default.Home, "dashboard"),
         BottomNavItem("البيع", Icons.Default.ShoppingCart, "cashier"),
@@ -67,6 +72,7 @@ fun MainAppScreen(db: AppDatabase) {
                 CashierScreen(
                     productDao = db.productDao(), 
                     saleDao = db.saleDao(),
+                    cart = cashierCart,
                     scannedBarcode = scannedBarcode.value,
                     onBarcodeConsumed = { entry.savedStateHandle["scanned_barcode"] = "" },
                     onScanClick = { navController.navigate("scanner") }

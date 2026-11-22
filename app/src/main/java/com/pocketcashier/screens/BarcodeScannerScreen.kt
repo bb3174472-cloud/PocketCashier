@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -13,6 +14,8 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,14 +45,32 @@ fun BarcodeScannerScreen(onBarcodeScanned: (String) -> Unit, onBack: () -> Unit)
         if (!hasCameraPermission) launcher.launch(Manifest.permission.CAMERA)
     }
 
-    // متغير لمنع المسح المتكرر بسرعة
     var isScanned by remember { mutableStateOf(false) }
+    
+    // متغيرات الفلاش والكاميرا
+    var isFlashOn by remember { mutableStateOf(false) }
+    var camera by remember { mutableStateOf<Camera?>(null) }
+
+    // تفعيل أو إطفاء الفلاش بناءً على حالة الزر
+    LaunchedEffect(isFlashOn) {
+        camera?.cameraControl?.enableTorch(isFlashOn)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("مسح الباركود") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "رجوع") } }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "رجوع") } },
+                actions = {
+                    // زر الفلاش
+                    IconButton(onClick = { isFlashOn = !isFlashOn }) {
+                        Icon(
+                            imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                            contentDescription = "الفلاش",
+                            tint = if (isFlashOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         }
     ) { padding ->
@@ -72,7 +93,7 @@ fun BarcodeScannerScreen(onBarcodeScanned: (String) -> Unit, onBack: () -> Unit)
                                         .addOnSuccessListener { barcodes ->
                                             if (!isScanned && barcodes.isNotEmpty()) {
                                                 barcodes.firstOrNull()?.rawValue?.let { 
-                                                    isScanned = true // إيقاف القراءة
+                                                    isScanned = true
                                                     onBarcodeScanned(it) 
                                                 }
                                             }
@@ -84,7 +105,8 @@ fun BarcodeScannerScreen(onBarcodeScanned: (String) -> Unit, onBack: () -> Unit)
                             }
                             try {
                                 cameraProvider.unbindAll()
-                                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
+                                // ربط الكاميرا وحفظها في المتغير للتحكم بالفلاش
+                                camera = cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
                             } catch (exc: Exception) {
                                 Log.e("CameraX", "Use case binding failed", exc)
                             }
