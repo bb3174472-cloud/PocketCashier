@@ -37,6 +37,9 @@ fun ProductsScreen(dao: ProductDao) {
                         Column {
                             Text(product.name, style = MaterialTheme.typography.titleMedium)
                             Text("بيع: ${product.price} | شراء: ${product.cost} | الكمية: ${product.quantity}", style = MaterialTheme.typography.bodySmall)
+                            if (!product.barcode.isNullOrBlank()) {
+                                Text("باركود: ${product.barcode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
                         }
                         IconButton(onClick = { scope.launch { dao.delete(product) } }) {
                             Icon(Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.error)
@@ -51,6 +54,7 @@ fun ProductsScreen(dao: ProductDao) {
         var name by remember { mutableStateOf("") }
         var price by remember { mutableStateOf("") }
         var cost by remember { mutableStateOf("") }
+        var barcode by remember { mutableStateOf("") }
         var quantity by remember { mutableStateOf("") }
         
         AlertDialog(
@@ -60,7 +64,8 @@ fun ProductsScreen(dao: ProductDao) {
                 Column {
                     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم") })
                     OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("سعر البيع") })
-                    OutlinedTextField(value = cost, onValueChange = { cost = it }, label = { Text("سعر التكلفة (الشراء)") })
+                    OutlinedTextField(value = cost, onValueChange = { cost = it }, label = { Text("سعر التكلفة") })
+                    OutlinedTextField(value = barcode, onValueChange = { barcode = it }, label = { Text("الباركود (اختياري)") })
                     OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية") })
                 }
             },
@@ -72,6 +77,7 @@ fun ProductsScreen(dao: ProductDao) {
                                 name = name, 
                                 price = price.toDoubleOrNull() ?: 0.0, 
                                 cost = cost.toDoubleOrNull() ?: 0.0,
+                                barcode = if(barcode.isBlank()) null else barcode,
                                 quantity = quantity.toIntOrNull() ?: 0
                             ))
                             showAddDialog = false

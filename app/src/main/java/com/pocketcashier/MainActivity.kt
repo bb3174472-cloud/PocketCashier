@@ -21,12 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val db = AppDatabase.getDatabase(this)
-        
-        setContent {
-            MaterialTheme {
-                MainAppScreen(db)
-            }
-        }
+        setContent { MaterialTheme { MainAppScreen(db) } }
     }
 }
 
@@ -47,7 +42,6 @@ fun MainAppScreen(db: AppDatabase) {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                
                 items.forEach { item ->
                     NavigationBarItem(
                         icon = { Icon(item.icon, contentDescription = item.title) },
@@ -67,17 +61,35 @@ fun MainAppScreen(db: AppDatabase) {
     ) { padding ->
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
             composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
-            composable("cashier") { CashierScreen(db.productDao(), db.saleDao()) }
+            
+            composable("cashier") { entry ->
+                val scannedBarcode = entry.savedStateHandle.getStateFlow("scanned_barcode", "").collectAsState()
+                CashierScreen(
+                    productDao = db.productDao(), 
+                    saleDao = db.saleDao(),
+                    scannedBarcode = scannedBarcode.value,
+                    onBarcodeConsumed = { entry.savedStateHandle["scanned_barcode"] = "" },
+                    onScanClick = { navController.navigate("scanner") }
+                )
+            }
+            composable("scanner") {
+                BarcodeScannerScreen(
+                    onBarcodeScanned = { barcode ->
+                        navController.previousBackStackEntry?.savedStateHandle?.set("scanned_barcode", barcode)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            
             composable("products") { ProductsScreen(db.productDao()) }
             composable("customers") { CustomersScreen(db.customerDao()) }
-            composable("more") { 
-                MoreScreen(
-                    onPurchasesClick = { navController.navigate("purchases") },
-                    onExpensesClick = { navController.navigate("expenses") },
-                    onReturnsClick = { navController.navigate("returns") },
-                    onReportsClick = { navController.navigate("reports") }
-                ) 
-            }
+            composable("more") { MoreScreen(
+                onPurchasesClick = { navController.navigate("purchases") },
+                onExpensesClick = { navController.navigate("expenses") },
+                onReturnsClick = { navController.navigate("returns") },
+                onReportsClick = { navController.navigate("reports") }
+            ) }
             composable("purchases") { PurchasesScreen(db.purchaseDao()) }
             composable("expenses") { ExpensesScreen(db.expenseDao()) }
             composable("returns") { ReturnsScreen(db.returnDao()) }
