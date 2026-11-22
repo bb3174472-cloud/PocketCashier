@@ -11,13 +11,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pocketcashier.data.ProductDao
+import com.pocketcashier.data.SaleDao
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(dao: ProductDao, onViewSalesClick: () -> Unit) {
-    val products by dao.getAllProducts().collectAsState(initial = emptyList())
-    val totalProducts = products.size
-    val totalStock = products.sumOf { it.quantity }
+fun DashboardScreen(productDao: ProductDao, saleDao: SaleDao, onViewSalesClick: () -> Unit) {
+    val products by productDao.getAllProducts().collectAsState(initial = emptyList())
+    
+    // حساب بداية اليوم الحالي
+    val startOfDay = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val totalSales by saleDao.getTotalSalesAmount().collectAsState(initial = 0.0)
+    val todaySales by saleDao.getTodaySalesAmount(startOfDay).collectAsState(initial = 0.0)
+    
     val lowStockCount = products.count { it.quantity < 5 }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -29,13 +41,13 @@ fun DashboardScreen(dao: ProductDao, onViewSalesClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(24.dp))
         
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            SummaryCard("إجمالي المنتجات", totalProducts.toString(), Color(0xFF2196F3), Modifier.weight(1f))
-            Spacer(modifier = Modifier.width(8.dp))
-            SummaryCard("إجمالي القطع", totalStock.toString(), Color(0xFF4CAF50), Modifier.weight(1f))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+        // البطاقات المالية
+        SummaryCard("مبيعات اليوم", "${todaySales ?: 0.0} ريال", Color(0xFF4CAF50), Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        SummaryCard("إجمالي المبيعات", "${totalSales ?: 0.0} ريال", Color(0xFF2196F3), Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
         
+        // بطاقة التنبيهات
         SummaryCard("منتجات قاربت على النفاد", lowStockCount.toString(), Color(0xFFF44336), Modifier.fillMaxWidth())
     }
 }
@@ -48,9 +60,9 @@ fun SummaryCard(title: String, value: String, color: Color, modifier: Modifier) 
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = value, style = MaterialTheme.typography.headlineLarge, color = color, fontWeight = FontWeight.Bold)
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = value, style = MaterialTheme.typography.headlineMedium, color = color, fontWeight = FontWeight.Bold)
         }
     }
 }

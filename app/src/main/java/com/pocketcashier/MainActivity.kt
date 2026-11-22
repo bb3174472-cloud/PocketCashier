@@ -67,7 +67,7 @@ fun MainAppScreen(db: AppDatabase) {
     ) { padding ->
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
             composable("dashboard") { 
-                DashboardScreen(db.productDao(), onViewSalesClick = { navController.navigate("sales_history") }) 
+                DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) 
             }
             composable("cashier") { CashierScreen(db.productDao(), db.saleDao()) }
             composable("products") { ProductsScreen(db.productDao()) }
