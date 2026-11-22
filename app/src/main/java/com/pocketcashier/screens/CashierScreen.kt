@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,9 +27,7 @@ fun CashierScreen(
     productDao: ProductDao, 
     saleDao: SaleDao,
     cart: MutableMap<Product, Int>,
-    scannedBarcode: String = "",
-    onBarcodeConsumed: () -> Unit = {},
-    onScanClick: () -> Unit = {}
+    onScanClick: () -> Unit // هذا هو المتغير الذي يفتح الكاميرا
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -36,10 +36,9 @@ fun CashierScreen(
     
     var showManualEntry by remember { mutableStateOf(false) }
 
-    fun processBarcode(barcode: String) {
+    fun processManualBarcode(barcode: String) {
         val cleanScanned = barcode.trim()
         var product = products.find { it.barcode?.trim() == cleanScanned }
-        
         if (product == null && cleanScanned.length == 13 && cleanScanned.startsWith("0")) {
             product = products.find { it.barcode?.trim() == cleanScanned.substring(1) }
         }
@@ -60,13 +59,6 @@ fun CashierScreen(
         }
     }
 
-    LaunchedEffect(scannedBarcode, products) {
-        if (scannedBarcode.isNotBlank() && products.isNotEmpty()) {
-            processBarcode(scannedBarcode)
-            onBarcodeConsumed()
-        }
-    }
-
     Scaffold(
         topBar = { 
             TopAppBar(
@@ -75,8 +67,9 @@ fun CashierScreen(
                     IconButton(onClick = { showManualEntry = true }) {
                         Icon(Icons.Default.Keyboard, contentDescription = "إدخال يدوي")
                     }
+                    // ⬇️ زر الكاميرا موجود هنا ⬇️
                     IconButton(onClick = onScanClick) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = "مسح باركود", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.CameraAlt, contentDescription = "فتح الكاميرا", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             ) 
@@ -111,19 +104,52 @@ fun CashierScreen(
             items(products) { product ->
                 val qtyInCart = cart[product] ?: 0
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable(enabled = product.quantity > qtyInCart) { cart[product] = qtyInCart + 1 },
-                    colors = CardDefaults.cardColors(containerColor = if (product.quantity > qtyInCart) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.errorContainer)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .clickable(enabled = product.quantity > qtyInCart) { cart[product] = qtyInCart + 1 },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (product.quantity > qtyInCart) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
-                    Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("متوفر: ${product.quantity} | سعر: ${product.price}")
                             if (!product.barcode.isNullOrBlank()) {
                                 Text("باركود: ${product.barcode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                         }
+                        
+                        // أزرار التحكم بالكمية
                         if (qtyInCart > 0) {
-                            Text("في السلة: $qtyInCart", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    if (qtyInCart == 1) cart.remove(product)
+                                    else cart[product] = qtyInCart - 1
+                                }) {
+                                    Icon(Icons.Default.Remove, contentDescription = "تقليل", tint = Color.Red)
+                                }
+                                
+                                Text(
+                                    text = "$qtyInCart",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                                
+                                IconButton(onClick = {
+                                    if (product.quantity > qtyInCart) cart[product] = qtyInCart + 1
+                                    else Toast.makeText(context, "الكمية غير كافية", Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Icon(Icons.Default.Add, contentDescription = "زيادة", tint = Color(0xFF4CAF50))
+                                }
+                            }
                         }
                     }
                 }
@@ -136,13 +162,11 @@ fun CashierScreen(
         AlertDialog(
             onDismissRequest = { showManualEntry = false },
             title = { Text("إدخال باركود يدوياً") },
-            text = {
-                OutlinedTextField(value = manualCode, onValueChange = { manualCode = it }, label = { Text("رقم الباركود") })
-            },
+            text = { OutlinedTextField(value = manualCode, onValueChange = { manualCode = it }, label = { Text("رقم الباركود") }) },
             confirmButton = {
                 TextButton(onClick = {
                     if (manualCode.isNotBlank()) {
-                        processBarcode(manualCode)
+                        processManualBarcode(manualCode)
                         manualCode = ""
                         showManualEntry = false
                     }

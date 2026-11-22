@@ -30,8 +30,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     val navController = rememberNavController()
-    
-    // السلة محفوظة هنا لتبقى حتى لو فتحت الكاميرا أو غيرت الشاشة
     val cashierCart = remember { mutableStateMapOf<Product, Int>() }
 
     val items = listOf(
@@ -67,23 +65,19 @@ fun MainAppScreen(db: AppDatabase) {
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
             composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
             
-            composable("cashier") { entry ->
-                val scannedBarcode = entry.savedStateHandle.getStateFlow("scanned_barcode", "").collectAsState()
+            composable("cashier") { 
                 CashierScreen(
                     productDao = db.productDao(), 
                     saleDao = db.saleDao(),
                     cart = cashierCart,
-                    scannedBarcode = scannedBarcode.value,
-                    onBarcodeConsumed = { entry.savedStateHandle["scanned_barcode"] = "" },
-                    onScanClick = { navController.navigate("scanner") }
+                    onScanClick = { navController.navigate("scanner") } // هنا يتم فتح الكاميرا
                 )
             }
+            
             composable("scanner") {
                 BarcodeScannerScreen(
-                    onBarcodeScanned = { barcode ->
-                        navController.previousBackStackEntry?.savedStateHandle?.set("scanned_barcode", barcode)
-                        navController.popBackStack()
-                    },
+                    productDao = db.productDao(),
+                    cart = cashierCart,
                     onBack = { navController.popBackStack() }
                 )
             }
