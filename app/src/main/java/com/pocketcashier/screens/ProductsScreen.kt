@@ -36,7 +36,7 @@ fun ProductsScreen(dao: ProductDao) {
                     Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
                             Text(product.name, style = MaterialTheme.typography.titleMedium)
-                            Text("السعر: ${product.price} | الكمية: ${product.quantity}", style = MaterialTheme.typography.bodyMedium)
+                            Text("بيع: ${product.price} | شراء: ${product.cost} | الكمية: ${product.quantity}", style = MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick = { scope.launch { dao.delete(product) } }) {
                             Icon(Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.error)
@@ -50,6 +50,7 @@ fun ProductsScreen(dao: ProductDao) {
     if (showAddDialog) {
         var name by remember { mutableStateOf("") }
         var price by remember { mutableStateOf("") }
+        var cost by remember { mutableStateOf("") }
         var quantity by remember { mutableStateOf("") }
         
         AlertDialog(
@@ -58,7 +59,8 @@ fun ProductsScreen(dao: ProductDao) {
             text = {
                 Column {
                     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم") })
-                    OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("السعر") })
+                    OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("سعر البيع") })
+                    OutlinedTextField(value = cost, onValueChange = { cost = it }, label = { Text("سعر التكلفة (الشراء)") })
                     OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية") })
                 }
             },
@@ -66,7 +68,12 @@ fun ProductsScreen(dao: ProductDao) {
                 TextButton(onClick = {
                     if (name.isNotBlank()) {
                         scope.launch {
-                            dao.insert(Product(name = name, price = price.toDoubleOrNull() ?: 0.0, quantity = quantity.toIntOrNull() ?: 0))
+                            dao.insert(Product(
+                                name = name, 
+                                price = price.toDoubleOrNull() ?: 0.0, 
+                                cost = cost.toDoubleOrNull() ?: 0.0,
+                                quantity = quantity.toIntOrNull() ?: 0
+                            ))
                             showAddDialog = false
                         }
                     }

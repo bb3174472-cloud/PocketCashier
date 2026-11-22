@@ -8,4 +8,5 @@ import kotlinx.coroutines.flow.Flow
 interface PurchaseDao {
     @Insert suspend fun insertPurchase(purchase: Purchase)
     @Query("SELECT * FROM purchases ORDER BY timestamp DESC") fun getAllPurchases(): Flow<List<Purchase>>
+    @Query("SELECT SUM(amount) FROM purchases") fun getTotalPurchases(): Flow<Double?>
 }

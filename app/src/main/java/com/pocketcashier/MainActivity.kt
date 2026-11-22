@@ -74,13 +74,14 @@ fun MainAppScreen(db: AppDatabase) {
                 MoreScreen(
                     onPurchasesClick = { navController.navigate("purchases") },
                     onExpensesClick = { navController.navigate("expenses") },
-                    onReturnsClick = { navController.navigate("returns") }
+                    onReturnsClick = { navController.navigate("returns") },
+                    onReportsClick = { navController.navigate("reports") }
                 ) 
             }
-            // شاشات المزيد
             composable("purchases") { PurchasesScreen(db.purchaseDao()) }
             composable("expenses") { ExpensesScreen(db.expenseDao()) }
             composable("returns") { ReturnsScreen(db.returnDao()) }
+            composable("reports") { ReportsScreen(db.saleDao(), db.expenseDao(), db.purchaseDao()) }
             composable("sales_history") { SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) }
         }
     }

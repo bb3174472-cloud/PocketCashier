@@ -17,12 +17,14 @@ import androidx.compose.ui.unit.dp
 fun MoreScreen(
     onPurchasesClick: () -> Unit,
     onExpensesClick: () -> Unit,
-    onReturnsClick: () -> Unit
+    onReturnsClick: () -> Unit,
+    onReportsClick: () -> Unit
 ) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("العمليات الإضافية") }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            MoreItem("التقارير المالية (الأرباح)", Icons.Default.Assessment, onReportsClick)
             MoreItem("المشتريات (شراء بضاعة)", Icons.Default.ShoppingBag, onPurchasesClick)
             MoreItem("المصروفات (إيجار، كهرباء..)", Icons.Default.Money, onExpensesClick)
             MoreItem("المرتجعات والتالف", Icons.Default.Refresh, onReturnsClick)

@@ -8,5 +8,6 @@ data class Product(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val price: Double,
+    val cost: Double = 0.0, // سعر التكلفة الجديد
     val quantity: Int
 )
