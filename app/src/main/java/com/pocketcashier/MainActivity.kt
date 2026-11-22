@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             MaterialTheme {
-                MainAppScreen(db.productDao(), db.customerDao())
+                MainAppScreen(db.productDao(), db.customerDao(), db.supplierDao())
             }
         }
     }
@@ -36,14 +36,14 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: com.pocketcashier.data.CustomerDao) {
+fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: com.pocketcashier.data.CustomerDao, supplierDao: com.pocketcashier.data.SupplierDao) {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem("الرئيسية", Icons.Default.Home, "dashboard"),
         BottomNavItem("البيع", Icons.Default.ShoppingCart, "cashier"),
         BottomNavItem("المنتجات", Icons.Default.Menu, "products"),
-        BottomNavItem("العملاء", Icons.Default.Person, "customers"), // التبويب الجديد
-        BottomNavItem("الإعدادات", Icons.Default.Settings, "settings")
+        BottomNavItem("العملاء", Icons.Default.Person, "customers"),
+        BottomNavItem("الموردين", Icons.Default.Store, "suppliers")
     )
 
     Scaffold(
@@ -74,7 +74,7 @@ fun MainAppScreen(productDao: com.pocketcashier.data.ProductDao, customerDao: co
             composable("cashier") { CashierScreen(productDao) }
             composable("products") { ProductsScreen(productDao) }
             composable("customers") { CustomersScreen(customerDao) }
-            composable("settings") { SettingsScreen() }
+            composable("suppliers") { SuppliersScreen(supplierDao) }
         }
     }
 }
