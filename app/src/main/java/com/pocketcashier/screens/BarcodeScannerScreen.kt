@@ -42,6 +42,9 @@ fun BarcodeScannerScreen(onBarcodeScanned: (String) -> Unit, onBack: () -> Unit)
         if (!hasCameraPermission) launcher.launch(Manifest.permission.CAMERA)
     }
 
+    // متغير لمنع المسح المتكرر بسرعة
+    var isScanned by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -63,12 +66,15 @@ fun BarcodeScannerScreen(onBarcodeScanned: (String) -> Unit, onBack: () -> Unit)
                             
                             imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                                 val mediaImage = imageProxy.image
-                                if (mediaImage != null) {
+                                if (mediaImage != null && !isScanned) {
                                     val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                                     BarcodeScanning.getClient().process(image)
                                         .addOnSuccessListener { barcodes ->
-                                            for (barcode in barcodes) {
-                                                barcode.rawValue?.let { onBarcodeScanned(it) }
+                                            if (!isScanned && barcodes.isNotEmpty()) {
+                                                barcodes.firstOrNull()?.rawValue?.let { 
+                                                    isScanned = true // إيقاف القراءة
+                                                    onBarcodeScanned(it) 
+                                                }
                                             }
                                         }
                                         .addOnCompleteListener { imageProxy.close() }

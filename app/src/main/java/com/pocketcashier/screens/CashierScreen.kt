@@ -33,7 +33,10 @@ fun CashierScreen(
     // التقاط الباركود الممسوح وإضافته للسلة
     LaunchedEffect(scannedBarcode) {
         if (scannedBarcode.isNotBlank()) {
-            val product = products.find { it.barcode == scannedBarcode }
+            // استخدام trim() لتجاهل أي مسافات زائدة في الباركود
+            val cleanScannedBarcode = scannedBarcode.trim()
+            val product = products.find { it.barcode?.trim() == cleanScannedBarcode }
+            
             if (product != null) {
                 val qtyInCart = cart[product] ?: 0
                 if (product.quantity > qtyInCart) {
