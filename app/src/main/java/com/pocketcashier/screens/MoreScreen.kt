@@ -18,7 +18,8 @@ fun MoreScreen(
     onPurchasesClick: () -> Unit,
     onExpensesClick: () -> Unit,
     onReturnsClick: () -> Unit,
-    onReportsClick: () -> Unit
+    onReportsClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("العمليات الإضافية") }) }
@@ -28,6 +29,7 @@ fun MoreScreen(
             MoreItem("المشتريات (شراء بضاعة)", Icons.Default.ShoppingBag, onPurchasesClick)
             MoreItem("المصروفات (إيجار، كهرباء..)", Icons.Default.Money, onExpensesClick)
             MoreItem("المرتجعات والتالف", Icons.Default.Refresh, onReturnsClick)
+            MoreItem("الإعدادات والتحكم", Icons.Default.Settings, onSettingsClick)
         }
     }
 }

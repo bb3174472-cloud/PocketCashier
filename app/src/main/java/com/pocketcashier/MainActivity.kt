@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val db = AppDatabase.getDatabase(this)
-        setContent { MaterialTheme { MainAppScreen(db) } }
+        setContent { MainAppScreen(db) }
     }
 }
 
@@ -30,9 +30,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     val navController = rememberNavController()
-    
-    // السلة محفوظة هنا لتبقى حتى لو فتحت الكاميرا
     val cashierCart = remember { mutableStateMapOf<Product, Int>() }
+    
+    // حالة الوضع الداكن (Dark Mode)
+    var isDarkTheme by remember { mutableStateOf(false) }
 
     val items = listOf(
         BottomNavItem("الرئيسية", Icons.Default.Home, "dashboard"),
@@ -42,61 +43,74 @@ fun MainAppScreen(db: AppDatabase) {
         BottomNavItem("المزيد", Icons.Default.MoreHoriz, "more")
     )
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-                items.forEach { item ->
-                    NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.title) },
-                        label = { Text(item.title) },
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+    MaterialTheme(
+        colorScheme = if (isDarkTheme) darkColorScheme() else lightColorScheme()
+    ) {
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
+                    items.forEach { item ->
+                        NavigationBarItem(
+                            icon = { Icon(item.icon, contentDescription = item.title) },
+                            label = { Text(item.title) },
+                            selected = currentRoute == item.route,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
-        }
-    ) { padding ->
-        NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
-            composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
-            
-            composable("cashier") { 
-                CashierScreen(
-                    productDao = db.productDao(), 
-                    saleDao = db.saleDao(),
-                    cart = cashierCart,
-                    onScanClick = { navController.navigate("scanner") }
-                )
+        ) { padding ->
+            NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
+                composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
+                composable("cashier") { 
+                    CashierScreen(
+                        productDao = db.productDao(), 
+                        saleDao = db.saleDao(),
+                        cart = cashierCart,
+                        onScanClick = { navController.navigate("scanner") }
+                    )
+                }
+                composable("scanner") {
+                    BarcodeScannerScreen(
+                        productDao = db.productDao(),
+                        cart = cashierCart,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable("products") { ProductsScreen(db.productDao()) }
+                composable("customers") { CustomersScreen(db.customerDao()) }
+                composable("more") { 
+                    MoreScreen(
+                        onPurchasesClick = { navController.navigate("purchases") },
+                        onExpensesClick = { navController.navigate("expenses") },
+                        onReturnsClick = { navController.navigate("returns") },
+                        onReportsClick = { navController.navigate("reports") },
+                        onSettingsClick = { navController.navigate("settings") }
+                    ) 
+                }
+                // شاشة الإعدادات الجديدة
+                composable("settings") { 
+                    SettingsScreen(
+                        db = db,
+                        isDarkTheme = isDarkTheme,
+                        onThemeChange = { isDarkTheme = it },
+                        onBack = { navController.popBackStack() }
+                    ) 
+                }
+                composable("purchases") { PurchasesScreen(db.purchaseDao()) }
+                composable("expenses") { ExpensesScreen(db.expenseDao()) }
+                composable("returns") { ReturnsScreen(db.returnDao()) }
+                composable("reports") { ReportsScreen(db.saleDao(), db.expenseDao(), db.purchaseDao()) }
+                composable("sales_history") { SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) }
             }
-            
-            composable("scanner") {
-                BarcodeScannerScreen(
-                    productDao = db.productDao(),
-                    cart = cashierCart,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-            
-            composable("products") { ProductsScreen(db.productDao()) }
-            composable("customers") { CustomersScreen(db.customerDao()) }
-            composable("more") { MoreScreen(
-                onPurchasesClick = { navController.navigate("purchases") },
-                onExpensesClick = { navController.navigate("expenses") },
-                onReturnsClick = { navController.navigate("returns") },
-                onReportsClick = { navController.navigate("reports") }
-            ) }
-            composable("purchases") { PurchasesScreen(db.purchaseDao()) }
-            composable("expenses") { ExpensesScreen(db.expenseDao()) }
-            composable("returns") { ReturnsScreen(db.returnDao()) }
-            composable("reports") { ReportsScreen(db.saleDao(), db.expenseDao(), db.purchaseDao()) }
-            composable("sales_history") { SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) }
         }
     }
 }
