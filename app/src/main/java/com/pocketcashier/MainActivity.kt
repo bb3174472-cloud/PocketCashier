@@ -39,7 +39,7 @@ fun MainAppScreen(db: AppDatabase) {
         BottomNavItem("البيع", Icons.Default.ShoppingCart, "cashier"),
         BottomNavItem("المنتجات", Icons.Default.Menu, "products"),
         BottomNavItem("العملاء", Icons.Default.Person, "customers"),
-        BottomNavItem("الموردين", Icons.Default.Store, "suppliers")
+        BottomNavItem("المزيد", Icons.Default.MoreHoriz, "more")
     )
 
     Scaffold(
@@ -66,16 +66,22 @@ fun MainAppScreen(db: AppDatabase) {
         }
     ) { padding ->
         NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
-            composable("dashboard") { 
-                DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) 
-            }
+            composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
             composable("cashier") { CashierScreen(db.productDao(), db.saleDao()) }
             composable("products") { ProductsScreen(db.productDao()) }
             composable("customers") { CustomersScreen(db.customerDao()) }
-            composable("suppliers") { SuppliersScreen(db.supplierDao()) }
-            composable("sales_history") { 
-                SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) 
+            composable("more") { 
+                MoreScreen(
+                    onPurchasesClick = { navController.navigate("purchases") },
+                    onExpensesClick = { navController.navigate("expenses") },
+                    onReturnsClick = { navController.navigate("returns") }
+                ) 
             }
+            // شاشات المزيد
+            composable("purchases") { PurchasesScreen(db.purchaseDao()) }
+            composable("expenses") { ExpensesScreen(db.expenseDao()) }
+            composable("returns") { ReturnsScreen(db.returnDao()) }
+            composable("sales_history") { SalesHistoryScreen(db.saleDao(), onBack = { navController.popBackStack() }) }
         }
     }
 }
