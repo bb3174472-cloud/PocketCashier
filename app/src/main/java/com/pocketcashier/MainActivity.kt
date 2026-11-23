@@ -29,10 +29,21 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(db: AppDatabase) {
-    val navController = rememberNavController()
-    val cashierCart = remember { mutableStateMapOf<Product, Int>() }
+    // حالة الدخول (تبدأ بـ false ليطلب الرقم السري)
+    var isLoggedIn by remember { mutableStateOf(false) }
     
-    // حالة الوضع الداكن (Dark Mode)
+    if (!isLoggedIn) {
+        LoginScreen(onLoginSuccess = { isLoggedIn = true })
+    } else {
+        MainNavigation(db)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainNavigation(db: AppDatabase) {
+    val navController = rememberNavController()
+    val cashierCart = remember { mutableMapOf<Product, Int>() }
     var isDarkTheme by remember { mutableStateOf(false) }
 
     val items = listOf(
@@ -71,20 +82,9 @@ fun MainAppScreen(db: AppDatabase) {
             NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
                 composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
                 composable("cashier") { 
-                    CashierScreen(
-                        productDao = db.productDao(), 
-                        saleDao = db.saleDao(),
-                        cart = cashierCart,
-                        onScanClick = { navController.navigate("scanner") }
-                    )
+                    CashierScreen(db.productDao(), db.saleDao(), cart = cashierCart, onScanClick = { navController.navigate("scanner") })
                 }
-                composable("scanner") {
-                    BarcodeScannerScreen(
-                        productDao = db.productDao(),
-                        cart = cashierCart,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                composable("scanner") { BarcodeScannerScreen(db.productDao(), cart = cashierCart, onBack = { navController.popBackStack() }) }
                 composable("products") { ProductsScreen(db.productDao()) }
                 composable("customers") { CustomersScreen(db.customerDao()) }
                 composable("more") { 
@@ -96,15 +96,7 @@ fun MainAppScreen(db: AppDatabase) {
                         onSettingsClick = { navController.navigate("settings") }
                     ) 
                 }
-                // شاشة الإعدادات الجديدة
-                composable("settings") { 
-                    SettingsScreen(
-                        db = db,
-                        isDarkTheme = isDarkTheme,
-                        onThemeChange = { isDarkTheme = it },
-                        onBack = { navController.popBackStack() }
-                    ) 
-                }
+                composable("settings") { SettingsScreen(db, isDarkTheme, { isDarkTheme = it }, { navController.popBackStack() }) }
                 composable("purchases") { PurchasesScreen(db.purchaseDao()) }
                 composable("expenses") { ExpensesScreen(db.expenseDao()) }
                 composable("returns") { ReturnsScreen(db.returnDao()) }
