@@ -16,6 +16,13 @@ android {
         versionName = "1.0"
     }
 
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            // استخدام مفتاح التوقيع الافتراضي (حتى لا يطلب منك إنشاء مفاتيح معقدة)
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
