@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -36,7 +37,6 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
 
-    // النسخ الاحتياطي
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) {
             scope.launch {
@@ -85,6 +85,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("الأمان", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                // هنا كان الخطأ، تم إضافة clickable
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth().clickable { showPinDialog = true }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("تغيير الرقم السري") }
                     Icon(Icons.Default.KeyboardArrowLeft, null)
@@ -112,7 +113,6 @@ fun SettingsScreen(
         }
     }
 
-    // نافذة تغيير الرقم السري
     if (showPinDialog) {
         var currentPin by remember { mutableStateOf("") }
         var newPin by remember { mutableStateOf("") }
