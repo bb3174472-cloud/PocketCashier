@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.pocketcashier.data.AppDatabase
 import kotlinx.coroutines.Dispatchers
@@ -30,181 +31,130 @@ fun SettingsScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    
     var showResetDialog by remember { mutableStateOf(false) }
+    var showPinDialog by remember { mutableStateOf(false) }
 
-    // 1. إعداد أداة حفظ النسخة الاحتياطية
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri ->
+    // النسخ الاحتياطي
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) {
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
                         val dbFile = context.getDatabasePath("pocket_cashier_db")
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            dbFile.inputStream().use { inputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
+                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                            dbFile.inputStream().use { it.copyTo(out) }
                         }
                     }
-                    Toast.makeText(context, "✅ تم حفظ النسخة الاحتياطية بنجاح", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
-                    Toast.makeText(context, "❌ فشل الحفظ: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                    Toast.makeText(context, "✅ تم حفظ النسخة بنجاح", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) { Toast.makeText(context, "❌ فشل الحفظ", Toast.LENGTH_LONG).show() }
             }
         }
     }
-
-    // 2. إعداد أداة استعادة النسخة الاحتياطية
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
                         val dbFile = context.getDatabasePath("pocket_cashier_db")
-                        // التأكد من إغلاق قاعدة البيانات قبل استبدالها (إن أمكن)
                         db.close()
-                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                            dbFile.outputStream().use { outputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            dbFile.outputStream().use { input.copyTo(it) }
                         }
                     }
-                    Toast.makeText(context, "✅ تمت الاستعادة بنجاح! يرجى إغلاق التطبيق وفتحه من جديد.", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
-                    Toast.makeText(context, "❌ فشل الاستعادة: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                    Toast.makeText(context, "✅ تمت الاستعادة! أعد تشغيل التطبيق.", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) { Toast.makeText(context, "❌ فشل الاستعادة", Toast.LENGTH_LONG).show() }
             }
         }
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("الإعدادات") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
-                    }
-                }
-            )
-        }
+        topBar = { TopAppBar(title = { Text("الإعدادات", fontWeight = FontWeight.Bold) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "رجوع") } }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
             
-            // إعدادات المظهر
             Text("المظهر", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DarkMode, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("الوضع الداكن (Dark Mode)", fontWeight = FontWeight.Bold)
-                    }
-                    Switch(
-                        checked = isDarkTheme,
-                        onCheckedChange = { onThemeChange(it) }
-                    )
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.DarkMode, null); Spacer(Modifier.width(8.dp)); Text("الوضع الداكن") }
+                    Switch(checked = isDarkTheme, onCheckedChange = onThemeChange)
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("الأمان", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Row(modifier = Modifier.padding(16.dp).fillMaxWidth().clickable { showPinDialog = true }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("تغيير الرقم السري") }
+                    Icon(Icons.Default.KeyboardArrowLeft, null)
+                }
+            }
             
-            // إعدادات النسخ الاحتياطي
+            Spacer(modifier = Modifier.height(16.dp))
             Text("النسخ الاحتياطي", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("حماية بياناتك", fontWeight = FontWeight.Bold)
-                    Text("قم بحفظ نسخة من بياناتك (المنتجات، الفواتير، الديون) في ملف على هاتفك، لاستعادتها في حال حذف التطبيق.", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { exportLauncher.launch("pocket_cashier_backup_${System.currentTimeMillis()}.db") },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(Icons.Default.Backup, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("حفظ نسخة")
-                        }
-                        Button(
-                            onClick = { importLauncher.launch(arrayOf("*/*")) },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Restore, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("استعادة نسخة")
-                        }
+                        Button(onClick = { exportLauncher.launch("backup_${System.currentTimeMillis()}.db") }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Backup, null); Spacer(Modifier.width(4.dp)); Text("حفظ") }
+                        Button(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Icon(Icons.Default.Restore, null); Spacer(Modifier.width(4.dp)); Text("استعادة") }
                     }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // إعدادات البيانات
+
+            Spacer(modifier = Modifier.height(16.dp))
             Text("البيانات", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("مسح جميع البيانات (تصفير التطبيق)", fontWeight = FontWeight.Bold, color = Color.Red)
-                    Text("سيتم حذف جميع المنتجات، الفواتير، العملاء، والموردين نهائياً.", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { showResetDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("مسح كل البيانات")
-                    }
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Button(onClick = { showResetDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Icon(Icons.Default.DeleteForever, null); Spacer(Modifier.width(8.dp)); Text("مسح كل البيانات")
                 }
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                "كاشير الجيب - الإصدار 1.0.0",
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
+    }
+
+    // نافذة تغيير الرقم السري
+    if (showPinDialog) {
+        var currentPin by remember { mutableStateOf("") }
+        var newPin by remember { mutableStateOf("") }
+        var confirmPin by remember { mutableStateOf("") }
+        
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = { Text("تغيير الرقم السري") },
+            text = {
+                Column {
+                    OutlinedTextField(value = currentPin, onValueChange = { if(it.length <= 4) currentPin = it }, label = { Text("الرقم الحالي") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(value = newPin, onValueChange = { if(it.length <= 4) newPin = it }, label = { Text("الرقم الجديد") }, visualTransformation = PasswordVisualTransformation())
+                    OutlinedTextField(value = confirmPin, onValueChange = { if(it.length <= 4) confirmPin = it }, label = { Text("تأكيد الرقم الجديد") }, visualTransformation = PasswordVisualTransformation())
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val savedPin = prefs.getString("app_pin", "1234")
+                    if (currentPin != savedPin) {
+                        Toast.makeText(context, "الرقم الحالي غير صحيح", Toast.LENGTH_SHORT).show()
+                    } else if (newPin.length != 4) {
+                        Toast.makeText(context, "الرقم الجديد يجب أن يكون 4 أرقام", Toast.LENGTH_SHORT).show()
+                    } else if (newPin != confirmPin) {
+                        Toast.makeText(context, "الرقم الجديد غير متطابق", Toast.LENGTH_SHORT).show()
+                    } else {
+                        prefs.edit().putString("app_pin", newPin).apply()
+                        Toast.makeText(context, "✅ تم تغيير الرقم السري بنجاح", Toast.LENGTH_SHORT).show()
+                        showPinDialog = false
+                    }
+                }) { Text("حفظ") }
+            },
+            dismissButton = { TextButton(onClick = { showPinDialog = false }) { Text("إلغاء") } }
+        )
     }
 
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("تحذير هام!") },
-            text = { Text("هل أنت متأكد من مسح جميع البيانات؟ لا يمكن التراجع عن هذه الخطوة.") },
+            title = { Text("تحذير!") },
+            text = { Text("هل أنت متأكد من مسح كل البيانات؟") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                db.clearAllTables()
-                            }
-                            showResetDialog = false
-                            Toast.makeText(context, "تم مسح جميع البيانات بنجاح", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
-                ) {
-                    Text("نعم، امسح الكل")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("إلغاء")
-                }
+                TextButton(onClick = { scope.launch { withContext(Dispatchers.IO) { db.clearAllTables() }; showResetDialog = false; Toast.makeText(context, "تم المسح", Toast.LENGTH_SHORT).show() } }, colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)) { Text("نعم") }
             }
         )
     }
