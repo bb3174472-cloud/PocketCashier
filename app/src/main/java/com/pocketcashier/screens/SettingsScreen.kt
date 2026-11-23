@@ -1,11 +1,12 @@
 package com.pocketcashier.screens
 
+import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +31,54 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
+
+    // 1. إعداد أداة حفظ النسخة الاحتياطية
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val dbFile = context.getDatabasePath("pocket_cashier_db")
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            dbFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                    }
+                    Toast.makeText(context, "✅ تم حفظ النسخة الاحتياطية بنجاح", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "❌ فشل الحفظ: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // 2. إعداد أداة استعادة النسخة الاحتياطية
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val dbFile = context.getDatabasePath("pocket_cashier_db")
+                        // التأكد من إغلاق قاعدة البيانات قبل استبدالها (إن أمكن)
+                        db.close()
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            dbFile.outputStream().use { outputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                    }
+                    Toast.makeText(context, "✅ تمت الاستعادة بنجاح! يرجى إغلاق التطبيق وفتحه من جديد.", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "❌ فشل الاستعادة: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -63,6 +112,39 @@ fun SettingsScreen(
                         checked = isDarkTheme,
                         onCheckedChange = { onThemeChange(it) }
                     )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // إعدادات النسخ الاحتياطي
+            Text("النسخ الاحتياطي", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("حماية بياناتك", fontWeight = FontWeight.Bold)
+                    Text("قم بحفظ نسخة من بياناتك (المنتجات، الفواتير، الديون) في ملف على هاتفك، لاستعادتها في حال حذف التطبيق.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { exportLauncher.launch("pocket_cashier_backup_${System.currentTimeMillis()}.db") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.Backup, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("حفظ نسخة")
+                        }
+                        Button(
+                            onClick = { importLauncher.launch(arrayOf("*/*")) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            Icon(Icons.Default.Restore, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("استعادة نسخة")
+                        }
+                    }
                 }
             }
             
