@@ -29,9 +29,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(db: AppDatabase) {
-    // حالة الدخول (تبدأ بـ false ليطلب الرقم السري)
     var isLoggedIn by remember { mutableStateOf(false) }
-    
     if (!isLoggedIn) {
         LoginScreen(onLoginSuccess = { isLoggedIn = true })
     } else {
@@ -54,9 +52,7 @@ fun MainNavigation(db: AppDatabase) {
         BottomNavItem("المزيد", Icons.Default.MoreHoriz, "more")
     )
 
-    MaterialTheme(
-        colorScheme = if (isDarkTheme) darkColorScheme() else lightColorScheme()
-    ) {
+    MaterialTheme(colorScheme = if (isDarkTheme) darkColorScheme() else lightColorScheme()) {
         Scaffold(
             bottomBar = {
                 NavigationBar {
@@ -82,7 +78,14 @@ fun MainNavigation(db: AppDatabase) {
             NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
                 composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
                 composable("cashier") { 
-                    CashierScreen(db.productDao(), db.saleDao(), cart = cashierCart, onScanClick = { navController.navigate("scanner") })
+                    CashierScreen(
+                        productDao = db.productDao(), 
+                        saleDao = db.saleDao(),
+                        customerDao = db.customerDao(),
+                        suspendedDao = db.suspendedSaleDao(),
+                        cart = cashierCart, 
+                        onScanClick = { navController.navigate("scanner") }
+                    )
                 }
                 composable("scanner") { BarcodeScannerScreen(db.productDao(), cart = cashierCart, onBack = { navController.popBackStack() }) }
                 composable("products") { ProductsScreen(db.productDao()) }

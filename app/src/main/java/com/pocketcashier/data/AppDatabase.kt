@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Product::class, Customer::class, Supplier::class, Sale::class, SaleItem::class, Purchase::class, Expense::class, ReturnDamage::class], version = 8, exportSchema = false)
+@Database(entities = [Product::class, Customer::class, Supplier::class, Sale::class, SaleItem::class, Purchase::class, Expense::class, ReturnDamage::class, SuspendedSale::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun customerDao(): CustomerDao
@@ -14,6 +14,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun purchaseDao(): PurchaseDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun returnDao(): ReturnDao
+    abstract fun suspendedSaleDao(): SuspendedSaleDao
 
     companion object {
         @Volatile
