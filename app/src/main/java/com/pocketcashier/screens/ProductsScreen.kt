@@ -35,8 +35,11 @@ fun ProductsScreen(dao: ProductDao) {
                 Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
-                            Text(product.name, style = MaterialTheme.typography.titleMedium)
+                            Text("${product.name} (${product.unit})", style = MaterialTheme.typography.titleMedium)
                             Text("بيع: ${product.price} | شراء: ${product.cost} | الكمية: ${product.quantity}", style = MaterialTheme.typography.bodySmall)
+                            if (!product.expiryDate.isNullOrBlank()) {
+                                Text("ينتهي في: ${product.expiryDate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
                             if (!product.barcode.isNullOrBlank()) {
                                 Text("باركود: ${product.barcode}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
@@ -55,6 +58,8 @@ fun ProductsScreen(dao: ProductDao) {
         var price by remember { mutableStateOf("") }
         var cost by remember { mutableStateOf("") }
         var barcode by remember { mutableStateOf("") }
+        var unit by remember { mutableStateOf("حبة") }
+        var expiryDate by remember { mutableStateOf("") }
         var quantity by remember { mutableStateOf("") }
         
         AlertDialog(
@@ -65,8 +70,13 @@ fun ProductsScreen(dao: ProductDao) {
                     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم") })
                     OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("سعر البيع") })
                     OutlinedTextField(value = cost, onValueChange = { cost = it }, label = { Text("سعر التكلفة") })
-                    OutlinedTextField(value = barcode, onValueChange = { barcode = it }, label = { Text("الباركود (اختياري)") })
+                    OutlinedTextField(value = barcode, onValueChange = { barcode = it }, label = { Text("الباركود") })
                     OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية") })
+                    
+                    // حقل الوحدة (مبسط)
+                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("الوحدة (حبة، كرتون..)") })
+                    // حقل تاريخ الانتهاء
+                    OutlinedTextField(value = expiryDate, onValueChange = { expiryDate = it }, label = { Text("تاريخ الانتهاء (YYYY-MM-DD)") })
                 }
             },
             confirmButton = {
@@ -78,6 +88,8 @@ fun ProductsScreen(dao: ProductDao) {
                                 price = price.toDoubleOrNull() ?: 0.0, 
                                 cost = cost.toDoubleOrNull() ?: 0.0,
                                 barcode = if(barcode.isBlank()) null else barcode,
+                                unit = if(unit.isBlank()) "حبة" else unit,
+                                expiryDate = if(expiryDate.isBlank()) null else expiryDate,
                                 quantity = quantity.toIntOrNull() ?: 0
                             ))
                             showAddDialog = false

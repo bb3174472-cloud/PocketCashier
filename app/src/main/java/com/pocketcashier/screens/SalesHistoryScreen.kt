@@ -1,12 +1,16 @@
 package com.pocketcashier.screens
 
 import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.pocketcashier.data.Sale
 import com.pocketcashier.data.SaleDao
 import com.pocketcashier.data.SaleItem
+import com.pocketcashier.utils.generateInvoicePdf
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -34,13 +39,20 @@ fun SalesHistoryScreen(dao: SaleDao, onBack: () -> Unit) {
     var selectedSale by remember { mutableStateOf<Sale?>(null) }
     var saleItems by remember { mutableStateOf<List<SaleItem>>(emptyList()) }
 
+    // أداة حفظ PDF
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null && selectedSale != null) {
+            val success = generateInvoicePdf(context, uri, selectedSale!!, saleItems)
+            if (success) Toast.makeText(context, "✅ تم حفظ الفاتورة كـ PDF", Toast.LENGTH_LONG).show()
+            else Toast.makeText(context, "❌ فشل حفظ الملف", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("سجل المبيعات") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "رجوع") }
-                }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "رجوع") } }
             )
         }
     ) { padding ->
@@ -58,42 +70,44 @@ fun SalesHistoryScreen(dao: SaleDao, onBack: () -> Unit) {
                             Text(dateFormat.format(Date(sale.timestamp)), style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("الإجمالي: ${sale.totalAmount} ريال", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("الإجمالي: ${sale.totalAmount} ريال", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(sale.paymentType, color = if (sale.paymentType == "نقدي") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
         }
     }
 
-    // نافذة تفاصيل الفاتورة (مع زر المشاركة)
+    // نافذة تفاصيل الفاتورة
     if (selectedSale != null) {
         val sale = selectedSale!!
         AlertDialog(
             onDismissRequest = { selectedSale = null },
             title = { 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("تفاصيل الفاتورة ${sale.id}")
-                    IconButton(onClick = {
-                        // كود مشاركة الفاتورة
-                        val shareText = buildString {
-                            appendLine("🧾 *كاشير الجيب* 🧾")
-                            appendLine("فاتورة رقم: ${sale.id}")
-                            appendLine("التاريخ: ${dateFormat.format(Date(sale.timestamp))}")
-                            appendLine("------------------------")
-                            saleItems.forEach { item ->
-                                appendLine("${item.productName} × ${item.quantity} = ${item.price * item.quantity} ريال")
+                    Text("فاتورة ${sale.id}")
+                    Row {
+                        // زر حفظ PDF
+                        IconButton(onClick = { pdfLauncher.launch("Invoice_${sale.id}.pdf") }) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = MaterialTheme.colorScheme.error)
+                        }
+                        // زر مشاركة نصية
+                        IconButton(onClick = {
+                            val shareText = buildString {
+                                appendLine("🧾 *فاتورة رقم ${sale.id}*")
+                                saleItems.forEach { item -> appendLine("${item.productName} × ${item.quantity} = ${item.price * item.quantity}") }
+                                appendLine("الإجمالي: *${sale.totalAmount} ريال*")
                             }
-                            appendLine("------------------------")
-                            appendLine("الإجمالي: *${sale.totalAmount} ريال*")
-                            appendLine("شكراً لتسوقكم معنا! 🌹")
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "مشاركة"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "مشاركة", tint = MaterialTheme.colorScheme.primary)
                         }
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "مشاركة الفاتورة عبر"))
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "مشاركة", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             },
@@ -106,11 +120,17 @@ fun SalesHistoryScreen(dao: SaleDao, onBack: () -> Unit) {
                         }
                         Divider()
                     }
+                    if (sale.discount > 0) {
+                        item {
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("الخصم", color = MaterialTheme.colorScheme.error)
+                                Text("-${sale.discount}", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { selectedSale = null }) { Text("إغلاق") }
-            }
+            confirmButton = { TextButton(onClick = { selectedSale = null }) { Text("إغلاق") } }
         )
     }
 }

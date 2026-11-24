@@ -3,13 +3,20 @@ package com.pocketcashier
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -17,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import com.pocketcashier.data.AppDatabase
 import com.pocketcashier.data.Product
 import com.pocketcashier.screens.*
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,25 +34,47 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     var isLoggedIn by remember { mutableStateOf(false) }
-    if (!isLoggedIn) {
-        LoginScreen(onLoginSuccess = { isLoggedIn = true })
+    var isManager by remember { mutableStateOf(true) }
+    var showSplash by remember { mutableStateOf(true) }
+
+    // شاشة البداية (تظهر لمدة 1.5 ثانية)
+    LaunchedEffect(Unit) {
+        delay(1500)
+        showSplash = false
+    }
+
+    if (showSplash) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF4A148C), Color(0xFF7B1FA2)))),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Storefront, contentDescription = null, tint = Color.White, modifier = Modifier.size(96.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("كاشير الجيب", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("نظام إدارة المبيعات والمخزون", fontSize = 16.sp, color = Color.White.copy(alpha = 0.8f))
+            }
+        }
     } else {
-        MainNavigation(db)
+        if (!isLoggedIn) {
+            LoginScreen(onLoginSuccess = { manager -> 
+                isManager = manager
+                isLoggedIn = true 
+            })
+        } else {
+            MainNavigation(db, isManager)
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainNavigation(db: AppDatabase) {
+fun MainNavigation(db: AppDatabase, isManager: Boolean) {
     val navController = rememberNavController()
-    
-    // ✅ هذا هو الإصلاح: استخدام mutableStateMapOf بدلاً من mutableMapOf
     val cashierCart = remember { mutableStateMapOf<Product, Int>() }
-    
     var isDarkTheme by remember { mutableStateOf(false) }
 
     val items = listOf(
@@ -80,28 +110,22 @@ fun MainNavigation(db: AppDatabase) {
         ) { padding ->
             NavHost(navController = navController, startDestination = "dashboard", modifier = Modifier.padding(padding)) {
                 composable("dashboard") { DashboardScreen(db.productDao(), db.saleDao(), onViewSalesClick = { navController.navigate("sales_history") }) }
-                composable("cashier") { 
-                    CashierScreen(
-                        productDao = db.productDao(), 
-                        saleDao = db.saleDao(),
-                        customerDao = db.customerDao(),
-                        suspendedDao = db.suspendedSaleDao(),
-                        cart = cashierCart, 
-                        onScanClick = { navController.navigate("scanner") }
-                    )
-                }
+                composable("cashier") { CashierScreen(db.productDao(), db.saleDao(), db.customerDao(), db.suspendedSaleDao(), cart = cashierCart, onScanClick = { navController.navigate("scanner") }) }
                 composable("scanner") { BarcodeScannerScreen(db.productDao(), cart = cashierCart, onBack = { navController.popBackStack() }) }
                 composable("products") { ProductsScreen(db.productDao()) }
                 composable("customers") { CustomersScreen(db.customerDao()) }
                 composable("more") { 
                     MoreScreen(
+                        isManager = isManager,
                         onPurchasesClick = { navController.navigate("purchases") },
                         onExpensesClick = { navController.navigate("expenses") },
                         onReturnsClick = { navController.navigate("returns") },
                         onReportsClick = { navController.navigate("reports") },
-                        onSettingsClick = { navController.navigate("settings") }
+                        onSettingsClick = { navController.navigate("settings") },
+                        onCashSessionClick = { navController.navigate("cash_session") }
                     ) 
                 }
+                composable("cash_session") { CashSessionScreen(db.cashSessionDao(), onBack = { navController.popBackStack() }) }
                 composable("settings") { SettingsScreen(db, isDarkTheme, { isDarkTheme = it }, { navController.popBackStack() }) }
                 composable("purchases") { PurchasesScreen(db.purchaseDao()) }
                 composable("expenses") { ExpensesScreen(db.expenseDao()) }

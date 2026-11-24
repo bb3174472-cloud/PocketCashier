@@ -15,31 +15,37 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
+    isManager: Boolean,
     onPurchasesClick: () -> Unit,
     onExpensesClick: () -> Unit,
     onReturnsClick: () -> Unit,
     onReportsClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onCashSessionClick: () -> Unit
 ) {
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("العمليات الإضافية") }) }
-    ) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("العمليات الإضافية") }) }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            MoreItem("التقارير المالية (الأرباح)", Icons.Default.Assessment, onReportsClick)
+            MoreItem("إدارة الصندوق (فتح/إغلاق)", Icons.Default.PointOfSale, onCashSessionClick)
+            
+            // إخفاء التقارير والإعدادات عن البائع
+            if (isManager) {
+                MoreItem("التقارير المالية (الأرباح)", Icons.Default.Assessment, onReportsClick)
+            }
+            
             MoreItem("المشتريات (شراء بضاعة)", Icons.Default.ShoppingBag, onPurchasesClick)
-            MoreItem("المصروفات (إيجار، كهرباء..)", Icons.Default.Money, onExpensesClick)
+            MoreItem("المصروفات", Icons.Default.Money, onExpensesClick)
             MoreItem("المرتجعات والتالف", Icons.Default.Refresh, onReturnsClick)
-            MoreItem("الإعدادات والتحكم", Icons.Default.Settings, onSettingsClick)
+            
+            if (isManager) {
+                MoreItem("الإعدادات والتحكم", Icons.Default.Settings, onSettingsClick)
+            }
         }
     }
 }
 
 @Composable
 fun MoreItem(title: String, icon: ImageVector, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(16.dp))
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
