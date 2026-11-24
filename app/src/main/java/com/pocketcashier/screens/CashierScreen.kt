@@ -78,15 +78,28 @@ fun CashierScreen(
         bottomBar = {
             if (cart.isNotEmpty()) {
                 Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(8.dp)) {
-                    Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("الإجمالي", style = MaterialTheme.typography.titleMedium)
                             Text("$totalAmount ريال", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // ✅ إضافة الأزرار الثلاثة (إلغاء، تعليق، دفع)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // زر الإلغاء
                             Button(
                                 onClick = { 
-                                    // حفظ الفاتورة كمعلقة
+                                    cart.clear() 
+                                    Toast.makeText(context, "تم إلغاء الفاتورة", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                            ) { Text("إلغاء", color = Color.White) }
+
+                            // زر التعليق
+                            Button(
+                                onClick = { 
                                     val jsonObject = JSONObject()
                                     cart.forEach { (p, q) -> jsonObject.put(p.id.toString(), q) }
                                     scope.launch {
@@ -95,13 +108,16 @@ fun CashierScreen(
                                         Toast.makeText(context, "تم تعليق الفاتورة", Toast.LENGTH_SHORT).show()
                                     }
                                 },
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
-                            ) { Text("تعليق") }
-                            
+                            ) { Text("تعليق", color = Color.White) }
+
+                            // زر الدفع
                             Button(
                                 onClick = { showCheckoutDialog = true },
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                            ) { Text("الدفع") }
+                            ) { Text("الدفع", color = Color.White) }
                         }
                     }
                 }
@@ -172,7 +188,6 @@ fun CashierScreen(
                     if (remaining > 0) {
                         Text("المتبقي (دين): $remaining ريال", color = Color.Red, fontWeight = FontWeight.Bold)
                         Text("اختر العميل لتسجيل الدين:", style = MaterialTheme.typography.bodySmall)
-                        // قائمة منسدلة مبسطة لاختيار العميل
                         LazyColumn(modifier = Modifier.heightIn(max = 120.dp)) {
                             items(customers) { customer ->
                                 Row(
@@ -198,7 +213,6 @@ fun CashierScreen(
                             val customerName = customers.find { it.id == selectedCustomerId }?.name
                             val paymentType = if (remaining <= 0) "نقدي" else if (paid == 0.0) "آجل" else "جزئي"
                             
-                            // 1. حفظ الفاتورة
                             val saleId = saleDao.insertSale(Sale(
                                 totalAmount = finalTotal, 
                                 discount = discount,
@@ -208,12 +222,10 @@ fun CashierScreen(
                                 customerName = customerName
                             ))
                             
-                            // 2. حفظ المنتجات وخصم المخزون
                             val saleItems = cart.map { (product, qty) -> SaleItem(saleId = saleId.toInt(), productName = product.name, price = product.price, quantity = qty) }
                             saleDao.insertSaleItems(saleItems)
                             cart.forEach { (product, qty) -> productDao.updateQuantity(product.id, qty) }
                             
-                            // 3. تسجيل الدين للعميل
                             if (remaining > 0 && selectedCustomerId != null) {
                                 customerDao.updateBalance(selectedCustomerId!!, remaining)
                             }
@@ -241,7 +253,6 @@ fun CashierScreen(
                             Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("فاتورة معلقة", fontWeight = FontWeight.Bold)
                                 Button(onClick = {
-                                    // استعادة السلة
                                     try {
                                         val json = JSONObject(suspended.cartData)
                                         cart.clear()

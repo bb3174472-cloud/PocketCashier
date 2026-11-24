@@ -41,7 +41,10 @@ fun MainAppScreen(db: AppDatabase) {
 @Composable
 fun MainNavigation(db: AppDatabase) {
     val navController = rememberNavController()
-    val cashierCart = remember { mutableMapOf<Product, Int>() }
+    
+    // ✅ هذا هو الإصلاح: استخدام mutableStateMapOf بدلاً من mutableMapOf
+    val cashierCart = remember { mutableStateMapOf<Product, Int>() }
+    
     var isDarkTheme by remember { mutableStateOf(false) }
 
     val items = listOf(
