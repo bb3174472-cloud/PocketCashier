@@ -2,6 +2,8 @@ package com.pocketcashier.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -57,15 +59,26 @@ fun BarcodeScannerScreen(
     var isFlashOn by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     
-    // متغيرات لمنع المسح المتكرر السريع لنفس الباركود
     var lastScannedCode by remember { mutableStateOf("") }
     var lastScanTime by remember { mutableStateOf(0L) }
+
+    // ✅ إنشاء مولد الصوت (ToneGenerator)
+    val toneGenerator = remember {
+        // STREAM_MUSIC هو المسار الصوتي، و 100 هو مستوى الصوت
+        ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+    }
+
+    // ✅ التخلص من مولد الصوت عند الخروج من الشاشة لعدم استهلاك الموارد
+    DisposableEffect(Unit) {
+        onDispose {
+            toneGenerator.release()
+        }
+    }
 
     LaunchedEffect(isFlashOn) {
         camera?.cameraControl?.enableTorch(isFlashOn)
     }
 
-    // دالة معالجة الباركود وإضافته للسلة
     fun handleBarcode(barcode: String) {
         val cleanCode = barcode.trim()
         var product = products.find { it.barcode?.trim() == cleanCode }
@@ -81,6 +94,8 @@ fun BarcodeScannerScreen(
             val qtyInCart = cart[product] ?: 0
             if (product.quantity > qtyInCart) {
                 cart[product] = qtyInCart + 1
+                // ✅ تشغيل الصوت عند نجاح الإضافة
+                toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
                 Toast.makeText(context, "تمت إضافة ${product.name}", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "الكمية غير كافية للمنتج: ${product.name}", Toast.LENGTH_SHORT).show()
@@ -132,7 +147,6 @@ fun BarcodeScannerScreen(
                                                 val barcode = barcodes.first().rawValue
                                                 if (barcode != null) {
                                                     val currentTime = System.currentTimeMillis()
-                                                    // منع التكرار: إذا كان نفس الباركود ومر أقل من 1.5 ثانية، تجاهله
                                                     if (barcode != lastScannedCode || currentTime - lastScanTime > 1500) {
                                                         lastScannedCode = barcode
                                                         lastScanTime = currentTime
