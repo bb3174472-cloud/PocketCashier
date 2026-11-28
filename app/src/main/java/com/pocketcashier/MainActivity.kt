@@ -3,13 +3,20 @@ package com.pocketcashier
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -17,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import com.pocketcashier.data.AppDatabase
 import com.pocketcashier.data.Product
 import com.pocketcashier.screens.*
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,14 +38,34 @@ class MainActivity : ComponentActivity() {
 fun MainAppScreen(db: AppDatabase) {
     var isLoggedIn by remember { mutableStateOf(false) }
     var isManager by remember { mutableStateOf(true) }
+    var showSplash by remember { mutableStateOf(true) }
 
-    if (!isLoggedIn) {
-        LoginScreen(onLoginSuccess = { manager -> 
-            isManager = manager
-            isLoggedIn = true 
-        })
+    LaunchedEffect(Unit) {
+        delay(1500)
+        showSplash = false
+    }
+
+    if (showSplash) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppNavy, AppBlue))),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Storefront, contentDescription = null, tint = AppGold, modifier = Modifier.size(96.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("كاشير الخلاقي", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("نظام إدارة المبيعات والمخزون", fontSize = 16.sp, color = AppGold)
+            }
+        }
     } else {
-        MainNavigation(db, isManager)
+        if (!isLoggedIn) {
+            LoginScreen(onLoginSuccess = { manager -> 
+                isManager = manager
+                isLoggedIn = true 
+            })
+        } else {
+            MainNavigation(db, isManager)
+        }
     }
 }
 

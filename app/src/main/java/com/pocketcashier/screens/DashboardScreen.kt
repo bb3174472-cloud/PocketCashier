@@ -21,7 +21,6 @@ import com.github.mikephil.charting.utils.ColorTemplate
 import com.pocketcashier.AppNavy
 import com.pocketcashier.data.ProductDao
 import com.pocketcashier.data.SaleDao
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +51,6 @@ fun DashboardScreen(productDao: ProductDao, saleDao: SaleDao, onViewSalesClick: 
             Text("مبيعات آخر 7 أيام (تجريبي)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             
-            // ✅ الرسم البياني
             Card(modifier = Modifier.fillMaxWidth().height(250.dp), elevation = CardDefaults.cardElevation(4.dp)) {
                 AndroidView(
                     factory = { context ->
@@ -61,7 +59,6 @@ fun DashboardScreen(productDao: ProductDao, saleDao: SaleDao, onViewSalesClick: 
                             setDrawGridBackground(false)
                             axisRight.isEnabled = false
                             
-                            // بيانات تجريبية (لأن جلب مبيعات كل يوم يطول شرحه، سنعرض شكلاً احترافياً)
                             val entries = ArrayList<BarEntry>()
                             entries.add(BarEntry(1f, 1500f))
                             entries.add(BarEntry(2f, 2300f))
@@ -77,7 +74,7 @@ fun DashboardScreen(productDao: ProductDao, saleDao: SaleDao, onViewSalesClick: 
                             
                             data = BarData(dataSet)
                             data.barWidth = 0.5f
-                            invalidate() // تحديث الرسم
+                            invalidate()
                         }
                     },
                     modifier = Modifier.fillMaxSize().padding(8.dp)
