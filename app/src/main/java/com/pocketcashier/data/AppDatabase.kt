@@ -7,18 +7,11 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        Product::class, 
-        Customer::class, 
-        Supplier::class, 
-        Sale::class, 
-        SaleItem::class, 
-        Purchase::class, 
-        Expense::class, 
-        ReturnDamage::class, 
-        SuspendedSale::class, 
-        CashSession::class
+        Product::class, Customer::class, Supplier::class, Sale::class, SaleItem::class, 
+        Purchase::class, Expense::class, ReturnDamage::class, SuspendedSale::class, 
+        CashSession::class, Stocktake::class
     ], 
-    version = 11, 
+    version = 12, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun returnDao(): ReturnDao
     abstract fun suspendedSaleDao(): SuspendedSaleDao
     abstract fun cashSessionDao(): CashSessionDao
+    abstract fun stocktakeDao(): StocktakeDao
 
     companion object {
         @Volatile

@@ -3,20 +3,13 @@ package com.pocketcashier
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -24,7 +17,6 @@ import androidx.navigation.compose.rememberNavController
 import com.pocketcashier.data.AppDatabase
 import com.pocketcashier.data.Product
 import com.pocketcashier.screens.*
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,62 +26,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// تعريف ألوان التطبيق الجديدة (كحلي وذهبي)
-val AppNavy = Color(0xFF0D1B2A)
-val AppBlue = Color(0xFF1B263B)
-val AppGold = Color(0xFFE0A96D)
-val AppBackground = Color(0xFFF4F6F9)
-
-val LightColors = lightColorScheme(
-    primary = AppNavy,
-    onPrimary = Color.White,
-    secondary = AppGold,
-    onSecondary = Color.Black,
-    background = AppBackground,
-    surface = Color.White
-)
-
-val DarkColors = darkColorScheme(
-    primary = AppGold,
-    onPrimary = Color.Black,
-    secondary = AppBlue,
-    onSecondary = Color.White,
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E)
-)
-
 @Composable
 fun MainAppScreen(db: AppDatabase) {
     var isLoggedIn by remember { mutableStateOf(false) }
     var isManager by remember { mutableStateOf(true) }
-    var showSplash by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        delay(1500)
-        showSplash = false
-    }
-
-    if (showSplash) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppNavy, AppBlue))),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Storefront, contentDescription = null, tint = AppGold, modifier = Modifier.size(96.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("كاشير الخلاقي", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("نظام إدارة المبيعات والمخزون", fontSize = 16.sp, color = AppGold)
-            }
-        }
+    if (!isLoggedIn) {
+        LoginScreen(onLoginSuccess = { manager -> 
+            isManager = manager
+            isLoggedIn = true 
+        })
     } else {
-        if (!isLoggedIn) {
-            LoginScreen(onLoginSuccess = { manager -> 
-                isManager = manager
-                isLoggedIn = true 
-            })
-        } else {
-            MainNavigation(db, isManager)
-        }
+        MainNavigation(db, isManager)
     }
 }
 
@@ -150,9 +98,11 @@ fun MainNavigation(db: AppDatabase, isManager: Boolean) {
                         onReturnsClick = { navController.navigate("returns") },
                         onReportsClick = { navController.navigate("reports") },
                         onSettingsClick = { navController.navigate("settings") },
-                        onCashSessionClick = { navController.navigate("cash_session") }
+                        onCashSessionClick = { navController.navigate("cash_session") },
+                        onStocktakeClick = { navController.navigate("stocktake") }
                     ) 
                 }
+                composable("stocktake") { StocktakeScreen(db.productDao(), db.stocktakeDao(), onBack = { navController.popBackStack() }) }
                 composable("cash_session") { CashSessionScreen(db.cashSessionDao(), onBack = { navController.popBackStack() }) }
                 composable("settings") { SettingsScreen(db, isDarkTheme, { isDarkTheme = it }, { navController.popBackStack() }) }
                 composable("purchases") { PurchasesScreen(db.purchaseDao()) }

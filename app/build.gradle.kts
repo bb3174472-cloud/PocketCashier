@@ -19,7 +19,6 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // استخدام مفتاح التوقيع الافتراضي (حتى لا يطلب منك إنشاء مفاتيح معقدة)
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -48,9 +47,13 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
+    // الكاميرا والباركود
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    // مكتبة الرسوم البيانية
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }

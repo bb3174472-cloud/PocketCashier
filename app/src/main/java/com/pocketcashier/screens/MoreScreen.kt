@@ -21,21 +21,19 @@ fun MoreScreen(
     onReturnsClick: () -> Unit,
     onReportsClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onCashSessionClick: () -> Unit
+    onCashSessionClick: () -> Unit,
+    onStocktakeClick: () -> Unit
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text("العمليات الإضافية") }) }) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             MoreItem("إدارة الصندوق (فتح/إغلاق)", Icons.Default.PointOfSale, onCashSessionClick)
-            
-            // إخفاء التقارير والإعدادات عن البائع
+            MoreItem("الجرد الفعلي", Icons.Default.Inventory, onStocktakeClick)
             if (isManager) {
                 MoreItem("التقارير المالية (الأرباح)", Icons.Default.Assessment, onReportsClick)
             }
-            
             MoreItem("المشتريات (شراء بضاعة)", Icons.Default.ShoppingBag, onPurchasesClick)
             MoreItem("المصروفات", Icons.Default.Money, onExpensesClick)
             MoreItem("المرتجعات والتالف", Icons.Default.Refresh, onReturnsClick)
-            
             if (isManager) {
                 MoreItem("الإعدادات والتحكم", Icons.Default.Settings, onSettingsClick)
             }
