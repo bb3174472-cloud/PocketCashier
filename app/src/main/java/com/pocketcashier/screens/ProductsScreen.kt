@@ -1,5 +1,8 @@
 package com.pocketcashier.screens
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,30 +10,65 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pocketcashier.data.Product
 import com.pocketcashier.data.ProductDao
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductsScreen(dao: ProductDao) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val products by dao.getAllProducts().collectAsState(initial = emptyList())
     
-    // متغيرات فتح النوافذ
     var showAddDialog by remember { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<Product?>(null) }
 
+    // أداة تصدير CSV
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val csvHeader = "ID,الاسم,الباركود,سعر البيع,سعر التكلفة,الكمية,الوحدة\n"
+                        val csvData = products.joinToString(separator = "\n") { p ->
+                            "${p.id},${p.name},${p.barcode ?: ""},${p.price},${p.cost},${p.quantity},${p.unit}"
+                        }
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            outputStream.write((csvHeader + csvData).toByteArray())
+                        }
+                    }
+                    Toast.makeText(context, "✅ تم تصدير المنتجات بنجاح", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "❌ فشل التصدير: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text("إدارة المنتجات") }) },
+        topBar = { 
+            TopAppBar(
+                title = { Text("إدارة المنتجات") },
+                actions = {
+                    // زر تصدير الإكسل
+                    IconButton(onClick = { exportLauncher.launch("Products_Export.csv") }) {
+                        Icon(Icons.Default.Share, contentDescription = "تصدير CSV", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            ) 
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "إضافة منتج")
@@ -43,7 +81,7 @@ fun ProductsScreen(dao: ProductDao) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
-                        .clickable { editingProduct = product }, // الضغط للتعديل
+                        .clickable { editingProduct = product },
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -51,9 +89,6 @@ fun ProductsScreen(dao: ProductDao) {
                             Text("${product.name} (${product.unit})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("بيع: ${product.price} | شراء: ${product.cost}", style = MaterialTheme.typography.bodySmall)
                             Text("الكمية المتوفرة: ${product.quantity}", color = if (product.quantity < 5) Color.Red else Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
-                            if (!product.expiryDate.isNullOrBlank()) {
-                                Text("ينتهي في: ${product.expiryDate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                            }
                         }
                         IconButton(onClick = { scope.launch { dao.delete(product) } }) {
                             Icon(Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.error)
@@ -64,7 +99,6 @@ fun ProductsScreen(dao: ProductDao) {
         }
     }
 
-    // نافذة الإضافة أو التعديل
     if (showAddDialog || editingProduct != null) {
         val isEditing = editingProduct != null
         
@@ -98,7 +132,7 @@ fun ProductsScreen(dao: ProductDao) {
                     if (name.isNotBlank()) {
                         scope.launch {
                             val newProduct = Product(
-                                id = editingProduct?.id ?: 0, // إذا كان تعديلاً، نحتفظ بالمعرف
+                                id = editingProduct?.id ?: 0,
                                 name = name, 
                                 price = price.toDoubleOrNull() ?: 0.0, 
                                 cost = cost.toDoubleOrNull() ?: 0.0,
@@ -107,13 +141,7 @@ fun ProductsScreen(dao: ProductDao) {
                                 expiryDate = if(expiryDate.isBlank()) null else expiryDate,
                                 quantity = quantity.toIntOrNull() ?: 0
                             )
-                            
-                            if (isEditing) {
-                                dao.update(newProduct) // تحديث
-                            } else {
-                                dao.insert(newProduct) // إضافة جديدة
-                            }
-                            
+                            if (isEditing) dao.update(newProduct) else dao.insert(newProduct)
                             showAddDialog = false
                             editingProduct = null
                         }

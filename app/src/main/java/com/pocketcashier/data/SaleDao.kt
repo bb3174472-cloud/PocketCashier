@@ -19,11 +19,13 @@ interface SaleDao {
     @Query("SELECT * FROM sale_items WHERE saleId = :saleId")
     suspend fun getSaleItems(saleId: Int): List<SaleItem>
 
-    // إجمالي المبيعات الكلية
     @Query("SELECT SUM(totalAmount) FROM sales")
     fun getTotalSalesAmount(): Flow<Double?>
 
-    // مبيعات اليوم (بناءً على التوقيت الحالي)
     @Query("SELECT SUM(totalAmount) FROM sales WHERE timestamp >= :startOfDay")
     fun getTodaySalesAmount(startOfDay: Long): Flow<Double?>
+
+    // دالة جديدة لجلب فواتير آخر 7 أيام للرسم البياني
+    @Query("SELECT * FROM sales WHERE timestamp >= :startDate")
+    suspend fun getSalesSince(startDate: Long): List<Sale>
 }
