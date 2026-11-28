@@ -35,15 +35,14 @@ fun ProductsScreen(dao: ProductDao) {
     var showAddDialog by remember { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<Product?>(null) }
 
-    // أداة تصدير CSV
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
-                        val csvHeader = "ID,الاسم,الباركود,سعر البيع,سعر التكلفة,الكمية,الوحدة\n"
+                        val csvHeader = "ID,الاسم,الباركود,سعر البيع,سعر الكرتون,سعر التكلفة,الكمية,الوحدة,حبات بالكرتون\n"
                         val csvData = products.joinToString(separator = "\n") { p ->
-                            "${p.id},${p.name},${p.barcode ?: ""},${p.price},${p.cost},${p.quantity},${p.unit}"
+                            "${p.id},${p.name},${p.barcode ?: ""},${p.price},${p.wholesalePrice ?: ""},${p.cost},${p.quantity},${p.unit},${p.conversionFactor}"
                         }
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                             outputStream.write((csvHeader + csvData).toByteArray())
@@ -51,7 +50,7 @@ fun ProductsScreen(dao: ProductDao) {
                     }
                     Toast.makeText(context, "✅ تم تصدير المنتجات بنجاح", Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
-                    Toast.makeText(context, "❌ فشل التصدير: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "❌ فشل التصدير", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -62,7 +61,6 @@ fun ProductsScreen(dao: ProductDao) {
             TopAppBar(
                 title = { Text("إدارة المنتجات") },
                 actions = {
-                    // زر تصدير الإكسل
                     IconButton(onClick = { exportLauncher.launch("Products_Export.csv") }) {
                         Icon(Icons.Default.Share, contentDescription = "تصدير CSV", tint = MaterialTheme.colorScheme.primary)
                     }
@@ -78,16 +76,16 @@ fun ProductsScreen(dao: ProductDao) {
         LazyColumn(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
             items(products) { product ->
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .clickable { editingProduct = product },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { editingProduct = product },
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("${product.name} (${product.unit})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("بيع: ${product.price} | شراء: ${product.cost}", style = MaterialTheme.typography.bodySmall)
+                            Text("بيع حبة: ${product.price} | شراء: ${product.cost}", style = MaterialTheme.typography.bodySmall)
+                            if (product.conversionFactor > 1 && product.wholesalePrice != null) {
+                                Text("بيع كرتون (${product.conversionFactor}): ${product.wholesalePrice}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
                             Text("الكمية المتوفرة: ${product.quantity}", color = if (product.quantity < 5) Color.Red else Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                         }
                         IconButton(onClick = { scope.launch { dao.delete(product) } }) {
@@ -105,26 +103,32 @@ fun ProductsScreen(dao: ProductDao) {
         var name by remember { mutableStateOf(editingProduct?.name ?: "") }
         var price by remember { mutableStateOf(editingProduct?.price?.toString() ?: "") }
         var cost by remember { mutableStateOf(editingProduct?.cost?.toString() ?: "") }
+        var wholesalePrice by remember { mutableStateOf(editingProduct?.wholesalePrice?.toString() ?: "") }
+        var conversionFactor by remember { mutableStateOf(editingProduct?.conversionFactor?.toString() ?: "1") }
         var barcode by remember { mutableStateOf(editingProduct?.barcode ?: "") }
         var unit by remember { mutableStateOf(editingProduct?.unit ?: "حبة") }
         var expiryDate by remember { mutableStateOf(editingProduct?.expiryDate ?: "") }
         var quantity by remember { mutableStateOf(editingProduct?.quantity?.toString() ?: "") }
         
         AlertDialog(
-            onDismissRequest = { 
-                showAddDialog = false
-                editingProduct = null 
-            },
+            onDismissRequest = { showAddDialog = false; editingProduct = null },
             title = { Text(if (isEditing) "تعديل منتج" else "منتج جديد") },
             text = {
                 LazyColumn {
                     item { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم") }, modifier = Modifier.fillMaxWidth()) }
-                    item { OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("سعر البيع") }, modifier = Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("سعر بيع الحبة") }, modifier = Modifier.fillMaxWidth()) }
                     item { OutlinedTextField(value = cost, onValueChange = { cost = it }, label = { Text("سعر التكلفة") }, modifier = Modifier.fillMaxWidth()) }
-                    item { OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية") }, modifier = Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("الكمية الإجمالية (بالحبات)") }, modifier = Modifier.fillMaxWidth()) }
+                    
+                    item { 
+                        Text("بيانات الكرتون (اختياري):", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                    }
+                    item { OutlinedTextField(value = conversionFactor, onValueChange = { conversionFactor = it }, label = { Text("عدد الحبات في الكرتون (مثال: 24)") }, modifier = Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(value = wholesalePrice, onValueChange = { wholesalePrice = it }, label = { Text("سعر بيع الكرتون") }, modifier = Modifier.fillMaxWidth()) }
+                    
                     item { OutlinedTextField(value = barcode, onValueChange = { barcode = it }, label = { Text("الباركود") }, modifier = Modifier.fillMaxWidth()) }
-                    item { OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("الوحدة (حبة، كرتون..)") }, modifier = Modifier.fillMaxWidth()) }
-                    item { OutlinedTextField(value = expiryDate, onValueChange = { expiryDate = it }, label = { Text("تاريخ الانتهاء (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("الوحدة الأساسية (حبة)") }, modifier = Modifier.fillMaxWidth()) }
+                    item { OutlinedTextField(value = expiryDate, onValueChange = { expiryDate = it }, label = { Text("تاريخ الانتهاء") }, modifier = Modifier.fillMaxWidth()) }
                 }
             },
             confirmButton = {
@@ -136,6 +140,8 @@ fun ProductsScreen(dao: ProductDao) {
                                 name = name, 
                                 price = price.toDoubleOrNull() ?: 0.0, 
                                 cost = cost.toDoubleOrNull() ?: 0.0,
+                                wholesalePrice = wholesalePrice.toDoubleOrNull(),
+                                conversionFactor = conversionFactor.toIntOrNull() ?: 1,
                                 barcode = if(barcode.isBlank()) null else barcode,
                                 unit = if(unit.isBlank()) "حبة" else unit,
                                 expiryDate = if(expiryDate.isBlank()) null else expiryDate,

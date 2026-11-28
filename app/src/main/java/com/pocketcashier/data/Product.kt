@@ -9,8 +9,10 @@ data class Product(
     val name: String,
     val price: Double,
     val cost: Double = 0.0,
+    val wholesalePrice: Double? = null, // سعر الكرتون
+    val conversionFactor: Int = 1, // عدد الحبات في الكرتون (1 يعني لا يوجد كرتون)
     val barcode: String? = null,
-    val unit: String = "حبة", // الوحدة (حبة، كرتون، كجم)
-    val expiryDate: String? = null, // تاريخ الانتهاء (اختياري)
+    val unit: String = "حبة",
+    val expiryDate: String? = null,
     val quantity: Int
 )
